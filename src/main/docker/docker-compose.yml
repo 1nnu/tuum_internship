@@ -1,0 +1,55 @@
+version: '2'
+
+services:
+  db:
+    image: 'postgres:16.2-alpine'
+    container_name: db
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=root
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      - ./sql/currencies_transactionTypes.sql:/docker-entrypoint-initdb.d/currencies_transactionTypes.sql
+    networks:
+      - product-net
+
+  app:
+    build: .
+    container_name: your-application
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/root
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_DRIVER=org.postgresql.Driver
+    ports:
+      - '8080:8080'
+    depends_on:
+      - db
+    networks:
+      - product-net
+
+  rabbitmq:
+    image: 'rabbitmq:3-management'
+    hostname: 'rabbit1'
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+      RABBITMQ_DEFAULT_USER: "rabbitmq"
+      RABBITMQ_DEFAULT_PASS: "rabbitmq"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    networks:
+      - product-net
+
+networks:
+  product-net:
+    driver: bridge
+volumes:
+  db:
+    driver: local
